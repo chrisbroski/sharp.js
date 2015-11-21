@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>'Stache Tutorial</title>
+<link rel="stylesheet" href="normalize.css">
+<link rel="stylesheet" href="simple.css">
+<body>
+
+<article>
+
+<h1>Comments</h1>
+<div id="comments"></div>
+
+<form method="POST" action="/api/comments" id="commentForm">
+    <input placeholder="Your name" name="author">
+    <input placeholder="Say something..." name="text">
+    <input type="submit" value="Post">
+</form>
+
+</article>
+
+<!--<script src="dist/stache.min.js"></script>-->
+<script src="mustache.js"></script>
+<script src="showdown.min.js"></script>
+<script src="stache.js"></script>
+<script src="acutejs"></script>
+<script>
+
+stache = new Stache();
+
+stache.rock('#comments', 'comment.mustache', '/api/comments');
+
+acute.ajax('#commentForm', {success: function () {
+    stache.rock('#comments', 'comment.mustache', '/api/comments');
+}});
+
+</script>
