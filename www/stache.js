@@ -73,19 +73,34 @@ function Stache() {
         xhr.open('GET', dataURI, true);
         xhr.setRequestHeader("Content-Type", datatype);
         xhr.onreadystatechange = function () {
-            var data = mustacheData(xhr.responseText, processor, formatters);
+            var data;
             if (xhr.readyState === 4) {
+                data = mustacheData(xhr.responseText, processor, formatters);
                 getTemplate(el, templateURI, data, callback);
             }
         };
         xhr.send();
     }
 
-    this.rock = function (el, template, data, extra) {
+    this.rock = function (el, dataURI, template, extra) {
+        var xhr;
         if (!el.tagName) {
             el = document.querySelector(el);
         }
-        getData(el, template, data, replaceHTML, extra);
+        if (template) {
+            getData(el, template, dataURI, replaceHTML, extra);
+        } else {
+            xhr = new XMLHttpRequest();
+            xhr.open('GET', dataURI, true);
+            xhr.setRequestHeader("Content-Type", "text/pht");
+            xhr.onreadystatechange = function () {
+                var data;
+                if (xhr.readyState === 4) {
+                    el.innerHTML = xhr.responseText;
+                }
+            };
+            xhr.send();
+        }
     };
 
     this.grow = function (el, template, data, childWrapper) {

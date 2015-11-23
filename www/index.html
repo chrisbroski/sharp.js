@@ -11,13 +11,12 @@
 
 <h1>Sharp.js Demo</h1>
 
-<form method="POST" action="/api/comments" id="commentForm">
+<form method="POST" action="/api/comment" id="commentForm">
     <fieldset>
-    <legend>Leave a Comment</legend>
     <p><input placeholder="Your name" name="author">
     <p><input placeholder="Say something..." name="text">
-    <p><input type="submit" name="submit" value="Post">
-    </fieldset
+    <p><input type="submit" name="submit" value="Leave Comment">
+    </fieldset>
 </form>
 
 <div id="comments"></div>
@@ -40,7 +39,8 @@ function mdToHtml(md) {
 }
 
 function getComments() {
-    stache.rock('#comments', 'comment.mustache', '/api/comments', {dataTransform: sortComments, formatters: [mdToHtml]});
+    //stache.rock('#comments', '/api/comments', 'comment.mustache', {dataTransform: sortComments, formatters: [mdToHtml]});
+    stache.rock('#comments', '/api/comment');
 }
 
 function sortComments(d) {
