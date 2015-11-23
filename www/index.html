@@ -9,30 +9,51 @@
 
 <article>
 
-<h1>Comments</h1>
-<div id="comments"></div>
+<h1>Sharp.js Demo</h1>
 
 <form method="POST" action="/api/comments" id="commentForm">
-    <input placeholder="Your name" name="author">
-    <input placeholder="Say something..." name="text">
-    <input type="submit" value="Post">
+    <fieldset>
+    <legend>Leave a Comment</legend>
+    <p><input placeholder="Your name" name="author">
+    <p><input placeholder="Say something..." name="text">
+    <p><input type="submit" name="submit" value="Post">
+    </fieldset
 </form>
+
+<div id="comments"></div>
 
 </article>
 
-<!--<script src="dist/stache.min.js"></script>-->
+<!--<script src="sharp.js"></script>-->
 <script src="mustache.js"></script>
-<script src="showdown.min.js"></script>
+<script src="md.js"></script>
 <script src="stache.js"></script>
-<script src="acutejs"></script>
+<script src="acute.js"></script>
 <script>
 
 stache = new Stache();
+acute = new Acute();
 
-stache.rock('#comments', 'comment.mustache', '/api/comments');
+function mdToHtml(md) {
+    var formatter = new CommentFormat();
+    return formatter.convert(md);
+}
+
+function getComments() {
+    stache.rock('#comments', 'comment.mustache', '/api/comments', {dataTransform: sortComments, formatters: [mdToHtml]});
+}
+
+function sortComments(d) {
+    return d.sort(function (a, b) {
+        return b.id - a.id;
+    });
+}
 
 acute.ajax('#commentForm', {success: function () {
-    stache.rock('#comments', 'comment.mustache', '/api/comments');
+    document.querySelector('#commentForm').reset();
+    getComments();
 }});
+
+getComments();
 
 </script>

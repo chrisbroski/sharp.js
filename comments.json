@@ -1,26 +1,17 @@
 [
     {
-        "id": 1388534400000,
-        "author": "Pete Hunt",
-        "text": "Hey there!",
-        "mds_text": "Hey there!"
+        "id": 1448194833800,
+        "author": "Chris",
+        "text": "Sharp rocks!"
     },
     {
-        "id": 1420070400000,
-        "author": "Paul O’Shannessy",
-        "text": "React is *great*!",
-        "mds_text": "React is *great*!"
+        "id": 1448194861091,
+        "author": "Romeo",
+        "text": "**Cheep**"
     },
     {
-        "id": 1447774919448,
-        "author": "rbdweasel",
-        "text": "Hi<a href=\"\">link</a>",
-        "mds_text": "Hi<a href=\"\">link</a>"
-    },
-    {
-        "id": 1448044783531,
-        "author": "asdf",
-        "text": "qwert",
-        "mds_text": "qwert"
+        "id": 1448194897411,
+        "author": "1337 hax0rs",
+        "text": "<script>alert('pwnd')</script>"
     }
 ]
