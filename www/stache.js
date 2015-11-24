@@ -4,6 +4,9 @@
 function Stache() {
     'use strict';
 
+    // cache mustache templates retrieved via Ajax
+    var templates = {};
+
     function replaceHTML(el, template, data) {
         el.innerHTML = Mustache.render(template, data);
     }
@@ -39,13 +42,18 @@ function Stache() {
 
     function getTemplate(el, templateURI, data, callback) {
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', templateURI, true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-                callback.call(this, el, xhr.responseText, data);
-            }
-        };
-        xhr.send();
+        if (templates[templateURI]) {
+            callback.call(this, el, templates[templateURI], data);
+        } else {
+            xhr.open('GET', templateURI, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    templates[templateURI] = xhr.responseText;
+                    callback.call(this, el, xhr.responseText, data);
+                }
+            };
+            xhr.send();
+        }
     }
 
     function getData(el, templateURI, dataURI, callback, extra) {
