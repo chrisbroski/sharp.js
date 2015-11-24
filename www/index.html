@@ -39,8 +39,8 @@ function mdToHtml(md) {
 }
 
 function getComments() {
-    //stache.rock('#comments', '/api/comments', 'comment.mustache', {dataTransform: sortComments, formatters: [mdToHtml]});
-    stache.rock('#comments', '/api/comment');
+    stache.rock('#comments', '/api/comment/', 'comment.mustache', {dataTransform: sortComments, formatters: [mdToHtml]});
+    //stache.rock('#comments', '/api/comment/');
 }
 
 function sortComments(d) {

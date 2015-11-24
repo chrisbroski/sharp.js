@@ -41,10 +41,13 @@ function Stache() {
     }
 
     function getTemplate(el, templateURI, data, callback) {
-        var xhr = new XMLHttpRequest();
+        var xhr;
+
+        // If we already got this mustache template, get it from cache
         if (templates[templateURI]) {
             callback.call(this, el, templates[templateURI], data);
         } else {
+            xhr = new XMLHttpRequest();
             xhr.open('GET', templateURI, true);
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
