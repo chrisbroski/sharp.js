@@ -898,18 +898,14 @@ function CommentFormat() {
         return htmlMd.join("\n");
     };
 }
-/*global CommentFormat, Mustache */
+/*global Mustache */
 /*jslint browser: true */
 
 function Stache() {
     'use strict';
 
-    function mdToHtml(md) {
-        //var converter = new showdown.Converter();
-        //return converter.makeHtml(md);
-        var formatter = new CommentFormat();
-        return formatter.convert(md);
-    }
+    // cache mustache templates retrieved via Ajax
+    var templates = {};
 
     function replaceHTML(el, template, data) {
         el.innerHTML = Mustache.render(template, data);
@@ -920,91 +916,136 @@ function Stache() {
         el.appendChild(wrapperEl);
     }
 
-    function mustacheData(data, processor) {
+    function getFunctionName(f) {
+        return (/^function\s+([\w\$]+)\s*\(/).exec(f.toString())[1];
+    }
+
+    function mustacheData(data, processor, formatters) {
         var dataJSON = JSON.parse(data);
 
         if (processor) {
             dataJSON = processor(dataJSON);
         }
-        // Add markdown converion function
-        dataJSON.sharp = {};
-        dataJSON.sharp.commentFormat = function () {
-            return function (text, render) {
-                return mdToHtml(render(text));
-            };
-        };
+
+        if (formatters) {
+            formatters.forEach(function (formatter) {
+                dataJSON[getFunctionName(formatter)] = function () {
+                    return function (text, render) {
+                        return formatter.call(this, render(text));
+                    };
+                };
+            });
+        }
 
         return dataJSON;
     }
 
     function getTemplate(el, templateURI, data, callback) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', templateURI, true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-                callback.call(this, el, xhr.responseText, data);
-            }
-        };
-        xhr.send();
+        var xhr;
+
+        // If we already got this mustache template, get it from cache
+        if (templates[templateURI]) {
+            callback.call(this, el, templates[templateURI], data);
+        } else {
+            xhr = new XMLHttpRequest();
+            xhr.open('GET', templateURI, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    templates[templateURI] = xhr.responseText;
+                    callback.call(this, el, xhr.responseText, data);
+                }
+            };
+            xhr.send();
+        }
     }
 
     function getData(el, templateURI, dataURI, callback, extra) {
+        /*
+        possible extra data values
+        .processor: a function to manipulate data returned from the dataURI
+        .formatters: an array of functions that the mustache template may call
+        .datatype: content type of requested data
+        */
         var xhr = new XMLHttpRequest(),
-            processor;
+            processor,
+            formatters,
+            datatype = 'application/json';
 
         if (extra && extra.dataTransform) {
             processor = extra.dataTransform;
         }
+        if (extra && extra.formatters) {
+            formatters = extra.formatters;
+        }
+        if (extra && extra.datatype) {
+            datatype = extra.datatype;
+        }
 
         xhr.open('GET', dataURI, true);
+        xhr.setRequestHeader("Content-Type", datatype);
         xhr.onreadystatechange = function () {
+            var data;
             if (xhr.readyState === 4) {
-                getTemplate(el, templateURI, mustacheData(xhr.responseText, processor), callback);
+                data = mustacheData(xhr.responseText, processor, formatters);
+                getTemplate(el, templateURI, data, callback);
             }
         };
         xhr.send();
     }
 
-    function isElement(o) {
-        if (o.tagName) {
-            return true;
-        }
-        return false;
-    }
-
-    this.rock = function (el, template, data, extra) {
-        if (!isElement(el)) {
+    this.rock = function (el, dataURI, template, extra) {
+        var xhr;
+        if (!el.tagName) {
             el = document.querySelector(el);
         }
-        getData(el, template, data, replaceHTML, extra);
+        if (template) {
+            getData(el, template, dataURI, replaceHTML, extra);
+        } else {
+            xhr = new XMLHttpRequest();
+            xhr.open('GET', dataURI, true);
+            xhr.setRequestHeader("Content-Type", "text/pht");
+            xhr.onreadystatechange = function () {
+                var data;
+                if (xhr.readyState === 4) {
+                    el.innerHTML = xhr.responseText;
+                }
+            };
+            xhr.send();
+        }
     };
 
     this.grow = function (el, template, data, childWrapper) {
         getData(el, template, data, appendEl, childWrapper);
     };
 }
+/*jslint browser: true */
+
 function Acute(success, error, init, validate) {
     'use strict';
 
     if (!success) {
-        success = function () {
-            // default success
+        success = function success() {
+            // re-enable click trigger
         };
     }
 
     if (!error) {
-        function defaultError() {
-            error = function (err) {
-                console.log(err);
-            };
-        }
+        error = function error(err) {
+            alert(err);
+        };
     }
 
-    function isElement(o) {
-        if (o.tagName) {
+    if (!init) {
+        init = function init() {
+            // disable click trigger
+            // show
+        };
+    }
+
+    if (!validate) {
+        validate = function validate() {
             return true;
-        }
-        return false;
+        };
     }
 
     function getFormData(form) {
@@ -1026,7 +1067,7 @@ function Acute(success, error, init, validate) {
     }
 
     this.ajax = function ajax(el, options) {
-        if (!isElement(el)) {
+        if (!el.tagName) {
             el = document.querySelector(el);
         }
         el.onsubmit = function (e) {
@@ -1057,6 +1098,6 @@ function Acute(success, error, init, validate) {
                     options.success.call(this, xhr);
                 }
             };
-        }
+        };
     };
 }

@@ -1,16 +1,12 @@
 /*jslint node: true */
 
-var fs = require('fs'),
-    express = require('express'),
-    bodyParser = require('body-parser'),
+var http = require('http'),
+    fs = require('fs'),
     mustache = require('Mustache'),
-    app = express(),
+    qs = require('querystring'),
     commentData = 'comments.json',
-    templates = {};
-
-app.use(express.static('www'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
+    templates = {},
+    server;
 
 function loadFiles() {
     'use strict';
@@ -28,7 +24,28 @@ function loadFiles() {
     /*jslint stupid: false */
 }
 
-app.get('/api/comment(/)?(:id)?', function (req, res) {
+function validate(res, body) {
+    'use strict';
+
+    // Author is required
+    if (!body.author) {
+        res.statusCode = 400;
+        res.setHeader('content-type', 'text/plain');
+        res.end('Author name is required', 'utf-8');
+        return false;
+    }
+
+    // body text is required
+    if (!body.text) {
+        res.statusCode = 400;
+        res.setHeader('content-type', 'text/plain');
+        res.end('Comment message is required', 'utf-8');
+        return false;
+    }
+    return true;
+}
+
+function get(req, res) {
     'use strict';
     fs.readFile(commentData, function (err, data) {
         var commentTemplate = templates.comments;
@@ -39,7 +56,7 @@ app.get('/api/comment(/)?(:id)?', function (req, res) {
         }
 
         data = JSON.parse(data);
-        if (req.params.id) {
+        /*if (req.params.id) {
             data = data.filter(function (c) {
                 if (c.id === parseInt(req.params.id, 10)) {
                     return true;
@@ -54,12 +71,13 @@ app.get('/api/comment(/)?(:id)?', function (req, res) {
                 return;
             }
             commentTemplate = templates.comment;
-        }
+        }*/
 
         res.setHeader('Cache-Control', 'max-age=0,no-cache,no-store,post-check=0,pre-check=0');
 
         if (req.headers['content-type'] === 'application/json') {
-            res.json(data);
+            res.setHeader('content-type', 'application/json');
+            res.end(JSON.stringify(data));
         } else if (req.headers['content-type'] === 'text/pht') {
             res.setHeader('content-type', 'text/pht');
             res.end(mustache.render(templates.partialComment, data), 'utf-8');
@@ -68,30 +86,9 @@ app.get('/api/comment(/)?(:id)?', function (req, res) {
             res.end(mustache.render(commentTemplate, data), 'utf-8');
         }
     });
-});
-
-function validate(req, res) {
-    'use strict';
-
-    // Author is required
-    if (!req.body.author) {
-        res.statusCode = 400;
-        res.setHeader('content-type', 'text/plain');
-        res.end('Author name is required', 'utf-8');
-        return false;
-    }
-
-    // body text is required
-    if (!req.body.text) {
-        res.statusCode = 400;
-        res.setHeader('content-type', 'text/plain');
-        res.end('Comment message is required', 'utf-8');
-        return false;
-    }
-    return true;
 }
 
-app.post('/api/comment', function (req, res) {
+function post(res, body) {
     'use strict';
     fs.readFile(commentData, function (err, data) {
         var comments, newComment;
@@ -100,14 +97,14 @@ app.post('/api/comment', function (req, res) {
             process.exit(1);
         }
         comments = JSON.parse(data);
-        if (!validate(req, res)) {
+        if (!validate(res, body)) {
             return;
         }
 
         newComment = {
             id: Date.now(),
-            author: req.body.author,
-            text: req.body.text,
+            author: body.author,
+            text: body.text,
         };
 
         comments.push(newComment);
@@ -116,49 +113,57 @@ app.post('/api/comment', function (req, res) {
                 console.error(err);
                 process.exit(1);
             }
-            res.setHeader('Cache-Control', 'no-cache');
-            res.json(comments);
+
+            res.writeHead(201, {'content-type': 'text/plain'});
+            res.end('Comment #' + newComment.id + ' added', 'utf-8');
         });
     });
-});
+}
 
-app.put('/api/comment/:id', function (req, res) {
+function routeMethods(req, res, body) {
     'use strict';
+    var method = req.method.toUpperCase(), reqBody;
 
-    function getCommentIndex(data, id) {
-        return data.map(function (d) {return d.id; }).indexOf(id);
+    if (method === 'POST') {
+        // if content-type is multipart form data, parse it
+        reqBody = qs.parse(body);
+        if (reqBody.method) {
+            method = reqBody.method;
+        }
     }
 
-    fs.readFile(commentData, function (err, data) {
-        var comments, commentId;
+    if (req.method === 'GET') {
+        get(req, res);
+    } else if (req.method === 'POST') {
+        post(res, reqBody);
+    } else {
+        res.writeHead(405, {'Content-Type': 'text/plain'});
+        res.end('Method not allowed');
+    }
+}
 
-        if (err) {
+function main(req, res) {
+    'use strict';
+    var body = [];
+
+    req.on('error', function (err) {
+        console.error(err);
+    }).on('data', function (chunk) {
+        body.push(chunk);
+    }).on('end', function () {
+        body = Buffer.concat(body).toString();
+
+        res.on('error', function (err) {
             console.error(err);
-            process.exit(1);
-        }
-        comments = JSON.parse(data);
-        if (!validate(req, res)) {
-            return;
-        }
-
-        commentId = getCommentIndex(comments, id);
-        comments[commentId].author = req.body.author;
-        comments[commentId].text = req.body.text;
-
-        fs.writeFile(commentData, JSON.stringify(comments, null, 4), function (err) {
-            if (err) {
-                console.error(err);
-                process.exit(1);
-            }
-            res.setHeader('Cache-Control', 'no-cache');
-            res.json(comments);
         });
+
+        routeMethods(req, res, body);
     });
-});
+}
 
 loadFiles();
 
-app.listen(51000, function () {
+server = http.createServer(main).listen(51001, function () {
     'use strict';
-    console.log('Server started: http://localhost:51000/');
+    console.log('Server running on port 51001');
 });
